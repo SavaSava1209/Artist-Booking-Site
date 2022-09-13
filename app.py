@@ -13,6 +13,8 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
+from models import *
+
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -21,7 +23,8 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
-db = SQLAlchemy(app)
+setup_db(app)
+# db_drop_and_create_all()
 migrate = Migrate(app, db)
 
 # TODO: connect to a local postgresql database
@@ -30,55 +33,7 @@ migrate = Migrate(app, db)
 # Models.
 #----------------------------------------------------------------------------#
 
-class Venue(db.Model):
-    __tablename__ = 'Venue'
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String, nullable=False)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
-    seeking_description = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    shows = db.relationship("Show", backref="venues", lazy=False, cascade="all, delete-orphan")
-
-    def __repr__(self):
-        return f"<Venue id={self.id} name={self.name} city={self.city} state={self.city}> \n"
-
-
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120), nullable=False)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean, nullable=False, default=False)
-    seeking_description = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    shows = db.relationship("Show", backref="artists", lazy=False, cascade="all, delete-orphan")
-
-    def __repr__(self):
-        return f"<Venue id={self.id} name={self.name} city={self.city} state={self.city}> \n"
-
-class Show(db.Model):
-    __tablename__ = "Show"
-
-    id = db.Column(db.Integer, primary_key=True)
-    artist_id = db.Column(db.Integer, db.ForeignKey("Artist.id"), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey("Venue.id"), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
 #----------------------------------------------------------------------------#
@@ -192,7 +147,7 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
   # data1={
-  #   "id": 8,
+  #   "id": 1,
   #   "name": "The Musical Hop",
   #   "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
   #   "address": "1015 Folsom Street",
@@ -272,19 +227,24 @@ def show_venue(venue_id):
   venue = Venue.query.get(venue_id)
   setattr(venue, "genres", venue.genres.split(','))
 
-  past_shows = list(filter(lambda show: show.start_time < datetime.now(), venue.shows))
-  temp_shows = []
-
+  # past_shows = list(filter(lambda show: show.start_time < datetime.now(), venue.shows))
+  past_shows = []
+  upcoming_shows = []
   for show in past_shows:
     temp = {}
     temp["artist_name"] = show.artists.name
     temp["artist_id"] = show.artists.id
     temp["artist_image_link"] = show.artists.image_link
     temp["start_time"] = show.start_time.strftime("%m/%d/%Y, %H:%M:%S")
-    temp_shows.append(temp)
+    if show.start_time < datetime.now():
+      past_shows.append(temp)
+    else:
+      upcoming_shows.append(temp)
 
-  setattr(venue, "past_shows", temp_shows)
+  setattr(venue, "past_shows", past_shows)
   setattr(venue,"past_shows_count", len(past_shows))
+  setattr(venue, "upcoming_shows", upcoming_shows)
+  setattr(venue,"upcoming_shows_count", len(upcoming_shows))
 
   return render_template('pages/show_venue.html', venue=venue)
 
@@ -427,7 +387,7 @@ def show_artist(artist_id):
   # shows the artist page with the given artist_id
   # TODO: replace with real artist data from the artist table, using artist_id
   # data1={
-  #   "id": 4,
+  #   "id": 1,
   #   "name": "Guns N Petals",
   #   "genres": ["Rock n Roll"],
   #   "city": "San Francisco",
@@ -449,7 +409,7 @@ def show_artist(artist_id):
   #   "upcoming_shows_count": 0,
   # }
   # data2={
-  #   "id": 5,
+  #   "id": 2,
   #   "name": "Matt Quevedo",
   #   "genres": ["Jazz"],
   #   "city": "New York",
@@ -469,7 +429,7 @@ def show_artist(artist_id):
   #   "upcoming_shows_count": 0,
   # }
   # data3={
-  #   "id": 6,
+  #   "id": 3,
   #   "name": "The Wild Sax Band",
   #   "genres": ["Jazz", "Classical"],
   #   "city": "San Francisco",
