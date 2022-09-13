@@ -227,10 +227,9 @@ def show_venue(venue_id):
   venue = Venue.query.get(venue_id)
   setattr(venue, "genres", venue.genres.split(','))
 
-  # past_shows = list(filter(lambda show: show.start_time < datetime.now(), venue.shows))
   past_shows = []
   upcoming_shows = []
-  for show in past_shows:
+  for show in venue.shows:
     temp = {}
     temp["artist_name"] = show.artists.name
     temp["artist_id"] = show.artists.id

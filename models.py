@@ -5,8 +5,10 @@ import json
 from datetime import datetime 
 
 database_name = "fyyur"
-database_path = f'postgresql://postgres:jin@localhost:5432/{database_name}'
-
+database_path = os.environ['DATABASE_URL']
+if database_path.startswith("postgres://"):
+  database_path = database_path.replace("postgres://", "postgresql://", 1)
+  
 db = SQLAlchemy()
 
 '''
@@ -15,16 +17,11 @@ setup_db(app)
 '''
 
 
-def setup_db(app):
+def setup_db(app, database_path = database_path):
     app.config["SQLALCHEMY_DATABASE_URI"] = database_path
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.app = app
     db.init_app(app)
-
-
-
-def db_drop_and_create_all():
-    db.drop_all()
     db.create_all()
     # add one demo row which is helping in POSTMAN test
     venue = Venue(
@@ -54,6 +51,7 @@ def db_drop_and_create_all():
         image_link = "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
     )
     artist.insert()
+    
 
 class Venue(db.Model):
     __tablename__ = 'Venue'
