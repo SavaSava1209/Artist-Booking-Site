@@ -3,6 +3,6 @@ install:
 # command to run tests
 script:
 # unit test
-- python test.py
+- python3 test.py
 # linting test
 - flake
